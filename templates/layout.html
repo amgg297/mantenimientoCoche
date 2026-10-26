@@ -1,0 +1,83 @@
+{{define "layout"}}<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"allowEval":false,"includeIndicatorStyles":false,"historyCacheSize":0}'>
+  <title>{{if .Vehicle.ID}}{{.Vehicle.Title}} · {{end}}Mi garaje</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/pico.min.css"><link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script><script src="/static/app.js" defer></script>
+</head>
+<body hx-boost="true" hx-target="#app" hx-select="#app" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']">
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="site-header"><div class="container header-inner"><a class="brand" href="/"><span class="brand-icon" aria-hidden="true">G.</span> Mi garaje<span class="brand-dot">/</span></a><span class="header-note">El libro de tus vehículos</span></div></header>
+  <div id="app" class="container">
+    <nav class="garage-tabs" aria-label="Vehículos">
+      <div class="tab-list">{{range .Vehicles}}<a class="car-tab {{if eq .ID $.Vehicle.ID}}active{{end}}" href="{{.URL}}" {{if eq .ID $.Vehicle.ID}}aria-current="page"{{end}}><span>{{.Title}}</span><small>{{.Plate}}</small></a>{{end}}</div>
+      <a class="add-car" href="/vehicles/new">＋ Añadir vehículo</a>
+    </nav>
+    <main id="main">
+      {{if .Error}}<div class="notice error" role="alert" tabindex="-1" data-focus-error><strong>No se ha guardado.</strong> {{.Error}}</div>{{end}}
+      {{if eq .View "empty"}}{{template "empty" .}}{{end}}
+      {{if eq .View "vehicle"}}{{template "vehicle" .}}{{end}}
+      {{if eq .View "vehicle-form"}}{{template "vehicle-form" .}}{{end}}
+      {{if eq .View "entry-form"}}{{template "entry-form" .}}{{end}}
+      {{if eq .View "delete"}}{{template "delete" .}}{{end}}
+    </main>
+    <footer class="site-footer"><span>MI GARAJE <span class="muted">/ Un historial para cuidar lo que te mueve.</span></span><span>Guardado en tu servidor</span></footer>
+  </div>
+  <div id="network-error" class="network-error" role="alert" hidden>No se ha podido completar la solicitud. Comprueba la conexión y vuelve a intentarlo.</div>
+</body></html>{{end}}
+
+{{define "empty"}}
+<section class="empty-welcome">
+  <div class="eyebrow">TU GARAJE, AL DÍA</div><h1>Cada coche.<br>Cada cuidado.</h1>
+  <p>Las revisiones, los cambios y esa pequeña reparación.<br>Todo el historial de tus vehículos, en un solo lugar.</p>
+  <a href="/vehicles/new" role="button">＋ Añadir mi primer vehículo</a>
+  <div class="empty-features"><span>01 &nbsp; Crea su ficha</span><span>02 &nbsp; Registra los cuidados</span><span>03 &nbsp; Consulta su historia</span></div>
+</section>{{end}}
+
+{{define "vehicle"}}
+<section class="page-heading"><div><div class="eyebrow">TU LIBRO DE MANTENIMIENTO</div><h1>{{.Vehicle.Title}}</h1><p class="subtitle">{{.Vehicle.Make}} {{.Vehicle.Model}} {{if .Vehicle.Fuel}}<span>·</span> {{.Vehicle.Fuel}}{{end}}</p></div><a class="secondary outline compact" role="button" href="{{.Vehicle.URL}}/edit">Editar vehículo ↗</a></section>
+<section class="overview" aria-label="Resumen del vehículo">
+  <article class="identity"><span class="eyebrow">EN TU GARAJE</span><div class="plate"><span class="eu">✦<br>E</span><strong>{{.Vehicle.Plate}}</strong></div><div class="odometer">{{number .Vehicle.KM}} <small>km</small></div><span class="muted">Kilometraje actual</span></article>
+  <article><div class="stat-label">PRÓXIMA ITV</div><strong class="stat-value">{{date .Vehicle.ITV}}</strong><span class="badge {{if eq (due .Vehicle.ITV) "Vencida"}}overdue{{else if eq (due .Vehicle.ITV) "Próximamente"}}soon{{end}}">{{due .Vehicle.ITV}}</span><small class="stat-foot">Fecha introducida en la ficha</small></article>
+  <article><div class="stat-label">SEGURO · VENCIMIENTO</div><strong class="stat-value">{{date .Vehicle.Insurance}}</strong><span class="badge {{if eq (due .Vehicle.Insurance) "Vencida"}}overdue{{else if eq (due .Vehicle.Insurance) "Próximamente"}}soon{{end}}">{{due .Vehicle.Insurance}}</span><small class="stat-foot">{{if .Vehicle.Insurer}}{{.Vehicle.Insurer}}{{else}}Compañía sin indicar{{end}}</small></article>
+  <article><div class="stat-label">INVERSIÓN EN CUIDADOS</div><strong class="stat-value">{{money .Total}}</strong><span class="muted">{{len .Entries}} {{if eq (len .Entries) 1}}mantenimiento{{else}}mantenimientos{{end}}</span><small class="stat-foot">Total del historial registrado</small></article>
+</section>
+<details class="vehicle-details"><summary>Ficha del vehículo <span class="muted">· Datos y documentación</span></summary><dl class="facts"><div><dt>Marca y modelo</dt><dd>{{.Vehicle.Make}} {{.Vehicle.Model}}</dd></div><div><dt>Primera matriculación</dt><dd>{{date .Vehicle.Registered}}</dd></div><div><dt>Bastidor (VIN)</dt><dd>{{if .Vehicle.VIN}}{{.Vehicle.VIN}}{{else}}Sin indicar{{end}}</dd></div><div><dt>Distintivo DGT</dt><dd>{{if .Vehicle.Label}}{{.Vehicle.Label}}{{else}}Sin indicar{{end}}</dd></div></dl>{{if .Vehicle.Notes}}<p class="notes">{{.Vehicle.Notes}}</p>{{end}}</details>
+<section class="history-heading"><div><div class="eyebrow">CADA CUIDADO CUENTA</div><h2>Historial de mantenimiento <span class="count">{{len .Entries}}</span></h2></div><a href="{{.Vehicle.URL}}/entries/new" role="button" class="compact">＋ Añadir mantenimiento</a></section>
+{{if .Entries}}<div class="history">
+{{range $entry := .Entries}}<article class="entry"><div class="entry-date"><strong>{{date .Date}}</strong><small>{{number .KM}} km</small></div><div class="entry-work"><div class="task-tags">{{range $.Tasks}}{{if has $entry.Tasks .Key}}<span>✓ {{.Label}}</span>{{end}}{{end}}</div>{{if .Notes}}<p class="notes">{{.Notes}}</p>{{end}}{{if .Workshop}}<div class="workshop">Taller / realizado por: {{.Workshop}}</div>{{end}}</div><div class="entry-cost"><strong>{{money .Cents}}</strong><div class="entry-actions"><a href="{{.URL}}/edit">Editar</a><a class="danger-link" href="{{.URL}}/delete">Eliminar</a></div></div></article>{{end}}
+</div>{{else}}<section class="empty-history"><div class="empty-symbol" aria-hidden="true">＋</div><h3>Su historia empieza aquí</h3><p>Añade el primer mantenimiento: una revisión, un cambio de aceite<br>o cualquier trabajo que quieras recordar.</p><a href="{{.Vehicle.URL}}/entries/new">Registrar el primer mantenimiento →</a></section>{{end}}
+{{end}}
+
+{{define "vehicle-form"}}
+<div class="form-heading"><a class="back-link" href="{{if .Vehicle.ID}}{{.Vehicle.URL}}{{else}}/{{end}}">← Volver al garaje</a><div class="eyebrow">LA FICHA DEL COCHE</div><h1>{{if .Vehicle.ID}}Editar vehículo{{else}}Un sitio para tu coche{{end}}</h1><p class="muted">Los campos con * son obligatorios. Puedes completar el resto más adelante.</p></div>
+<form method="post" action="{{if .Vehicle.ID}}{{.Vehicle.URL}}{{else}}/vehicles{{end}}" class="editor">
+<article><h2>01 <span>Datos del vehículo</span></h2><div class="grid"><label>Marca *<input name="make" value="{{.Vehicle.Make}}" maxlength="100" placeholder="Ej. SEAT" required></label><label>Modelo *<input name="model" value="{{.Vehicle.Model}}" maxlength="100" placeholder="Ej. León 1.5 TSI" required></label></div>
+<div class="grid"><label>Matrícula *<input class="uppercase" name="plate" value="{{.Vehicle.Plate}}" maxlength="20" placeholder="1234 ABC" required></label><label>Kilometraje actual *<input name="km" type="number" min="0" max="10000000" step="1" value="{{.Vehicle.KM}}" required></label></div>
+<label>Nombre de la pestaña<input name="name" value="{{.Vehicle.Name}}" maxlength="100" placeholder="Ej. El coche de casa"><small>Si lo dejas vacío, usaremos la marca y el modelo.</small></label>
+<div class="grid"><label>Combustible<select name="fuel"><option value="">Sin indicar</option>{{range .Fuels}}<option {{if eq . $.Vehicle.Fuel}}selected{{end}}>{{.}}</option>{{end}}</select></label><label>Distintivo ambiental DGT<select name="label"><option value="">Sin indicar</option>{{range .Labels}}<option {{if eq . $.Vehicle.Label}}selected{{end}}>{{.}}</option>{{end}}</select></label></div>
+</article>
+<article><h2>02 <span>Documentación y fechas</span></h2><div class="grid"><label>Primera matriculación<input type="date" name="registered" value="{{.Vehicle.Registered}}" min="1900-01-01" max="{{.Today}}"></label><label>Próxima ITV<input type="date" name="itv" value="{{.Vehicle.ITV}}" min="1900-01-01" max="2200-12-31"></label></div>
+<label>Número de bastidor (VIN)<input name="vin" value="{{.Vehicle.VIN}}" maxlength="30" class="uppercase"></label>
+<div class="grid"><label>Compañía del seguro<input name="insurer" value="{{.Vehicle.Insurer}}" maxlength="100" placeholder="Nombre de la aseguradora"></label><label>Vencimiento del seguro<input type="date" name="insurance" value="{{.Vehicle.Insurance}}" min="1900-01-01" max="2200-12-31"></label></div>
+<small>Introduce la próxima ITV que figura en tu documentación. Marcar una ITV en el historial no cambia esta fecha.</small></article>
+<article><h2>03 <span>Otros datos</span></h2><label>Observaciones<textarea name="notes" rows="4" maxlength="5000" placeholder="Motorización, medidas de neumáticos, especificación de aceite, número de póliza…">{{.Vehicle.Notes}}</textarea></label></article>
+<div class="form-actions"><a href="{{if .Vehicle.ID}}{{.Vehicle.URL}}{{else}}/{{end}}" class="secondary">Cancelar</a><button type="submit">{{if .Vehicle.ID}}Guardar cambios{{else}}Crear vehículo{{end}}</button></div>
+</form>
+{{if .Vehicle.ID}}<div class="danger-zone"><a class="danger-link" href="{{.Vehicle.URL}}/delete">Eliminar vehículo y su historial</a></div>{{end}}
+{{end}}
+
+{{define "entry-form"}}
+<div class="form-heading"><a class="back-link" href="{{.Vehicle.URL}}">← Volver a {{.Vehicle.Title}}</a><div class="eyebrow">{{.Vehicle.Plate}} · {{.Vehicle.Title}}</div><h1>{{if .Entry.ID}}Editar mantenimiento{{else}}Un cuidado más, registrado{{end}}</h1><p class="muted">Marca lo que se ha hecho y deja los detalles para la próxima vez.</p></div>
+<form class="editor" method="post" action="{{if .Entry.ID}}{{.Entry.URL}}{{else}}{{.Vehicle.URL}}/entries{{end}}">
+<article><h2>01 <span>La visita al taller</span></h2><div class="grid"><label>Fecha *<input name="date" type="date" value="{{.Entry.Date}}" min="1900-01-01" max="{{.Today}}" required></label><label>Kilometraje *<input name="km" type="number" min="0" max="10000000" step="1" value="{{.Entry.KM}}" required></label><label>Importe total (€) *<input name="price" inputmode="decimal" placeholder="0,00" value="{{.Price}}" pattern="[0-9]{1,7}([.,][0-9]{1,2})?" required><small>Admite 0 € y coma o punto decimal.</small></label></div><label>Taller / realizado por<input name="workshop" value="{{.Entry.Workshop}}" maxlength="100" placeholder="Nombre del taller, o por mi cuenta"></label><small>Se admiten registros antiguos. Si estos km superan los actuales, se actualizará la ficha del coche.</small></article>
+<article><h2>02 <span>¿Qué se ha hecho?</span></h2><fieldset class="task-options"><legend class="muted">Marcado = hecho · Sin marcar = no registrado</legend>{{range .Tasks}}<label><input type="checkbox" name="{{.Key}}" {{if has $.Entry.Tasks .Key}}checked{{end}}> {{.Label}}</label>{{end}}</fieldset></article>
+<article><h2>03 <span>Los detalles que importan</span></h2><label>Observaciones y otros trabajos<textarea name="notes" rows="5" maxlength="5000" placeholder="Otros cambios, piezas y referencias, marca del aceite, próximos trabajos…">{{.Entry.Notes}}</textarea></label><small>Escribe aquí los trabajos que no aparecen en la lista. Marca una tarea o añade una observación.</small></article>
+<div class="form-actions"><a class="secondary" href="{{.Vehicle.URL}}">Cancelar</a><button type="submit">Guardar mantenimiento</button></div>
+</form>{{end}}
+
+{{define "delete"}}
+<section class="delete-panel"><div class="eyebrow">CONFIRMAR ELIMINACIÓN</div><h1>{{if .DeleteEntry}}Eliminar mantenimiento{{else}}Eliminar {{.Vehicle.Title}}{{end}}</h1><p>{{if .DeleteEntry}}Se eliminará el mantenimiento del <strong>{{date .Entry.Date}}</strong> de {{.Vehicle.Title}}, por {{money .Entry.Cents}}.{{else}}Se eliminará el vehículo <strong>{{.Vehicle.Plate}}</strong> y todos sus mantenimientos.{{end}} Esta acción no se puede deshacer.</p><form method="post" action="{{.DeleteAction}}"><input type="hidden" name="confirm" value="yes"><div class="form-actions"><a class="secondary" href="{{.Vehicle.URL}}">Cancelar y volver</a><button type="submit" class="danger-button">Sí, eliminar {{if .DeleteEntry}}mantenimiento{{else}}vehículo{{end}}</button></div></form></section>{{end}}

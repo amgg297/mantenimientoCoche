@@ -1,0 +1,24 @@
+[Unit]
+Description=Mi garaje - Libro de mantenimiento
+After=network.target
+
+[Service]
+Type=simple
+User=mantenimiento
+Group=mantenimiento
+WorkingDirectory=/var/lib/mantenimiento
+ExecStart=/opt/mantenimiento/mantenimiento
+Environment=ADDR=0.0.0.0:8080
+Environment=DB_PATH=/var/lib/mantenimiento/mantenimiento.db
+StateDirectory=mantenimiento
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
