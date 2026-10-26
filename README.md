@@ -39,6 +39,20 @@ ADDR=0.0.0.0:8080 go run .
 
 En PowerShell: `$env:ADDR='0.0.0.0:8080'; go run .`.
 
+## Ejecutar con Docker
+
+Instala [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows o macOS) o el motor de Docker en Linux. Desde la carpeta del proyecto:
+
+```sh
+docker compose up -d --build
+```
+
+Abre http://127.0.0.1:8080. La base de datos queda en `./data` (el mismo directorio que con `go run .`). Para detener: `docker compose down`. Para ver logs: `docker compose logs -f`.
+
+El contenedor escucha en todas las interfaces del host en el puerto 8080; mantenlo accesible solo desde tu red doméstica o VPN, ya que cualquiera que acceda puede editar o borrar los datos. No necesita un proxy inverso.
+
+Para una copia coherente con Docker: `docker compose stop`, copia `./data` (incluido `-wal` y `-shm` si existen) y vuelve a arrancar con `docker compose start`.
+
 ## Desplegar en Ubuntu con systemd
 
 Compila en el servidor con Go 1.25+ o lleva un binario compilado para su arquitectura. No necesita Go ni SQLite instalados para **ejecutarse**: plantillas, CSS, JavaScript y controlador SQLite están incluidos en el ejecutable.
@@ -101,6 +115,8 @@ handlers.go             CRUD y validación
 templates/layout.html   Pantallas y formularios
 static/                 Pico CSS, htmx, estilos y JS mínimo
 deploy/                 Servicio systemd
+Dockerfile              Imagen multi-etapa
+docker-compose.yml      Puerto 8080 y volumen ./data
 ```
 
 ```sh

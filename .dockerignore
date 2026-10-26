@@ -1,0 +1,13 @@
+.git
+.tools
+bin
+data
+*.db
+*.db-shm
+*.db-wal
+*.exe
+.dockerignore
+Dockerfile
+docker-compose.yml
+README.md
+deploy
